@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Forecaster + Health Planner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a2a6c 0%, #2d5a8e 50%, #1a7a9a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 40px 16px 60px;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      text-align: center;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      opacity: 0.75;
+      margin-bottom: 36px;
+      text-align: center;
+    }
+
+    /* ── Glass card base ── */
+    .glass {
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 20px;
+    }
+
+    /* Search card */
+    .search-card {
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 28px;
+    }
+
+    .search-row { display: flex; gap: 10px; }
+
+    #zipInput {
+      flex: 1;
+      padding: 14px 18px;
+      border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #zipInput::placeholder { color: rgba(255,255,255,0.55); }
+    #zipInput:focus { border-color: rgba(255,255,255,0.7); }
+
+    .btn-primary {
+      padding: 14px 26px;
+      border-radius: 12px;
+      border: none;
+      background: rgba(255,255,255,0.9);
+      color: #1a2a6c;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: #fff; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-accent {
+      padding: 14px 28px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #f6a623, #f05133);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-accent:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-accent:active { transform: translateY(0); }
+
+    /* Error */
+    .error-msg {
+      background: rgba(255, 80, 80, 0.25);
+      border: 1px solid rgba(255,120,120,0.5);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 14px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    /* Results wrapper */
+    #results { width: 100%; max-width: 860px; display: none; }
+
+    /* Current weather */
+    .current-card {
+      padding: 32px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .current-left h2 { font-size: 1.1rem; font-weight: 500; opacity: 0.75; margin-bottom: 4px; }
+    .current-left .city-name { font-size: 1.7rem; font-weight: 700; margin-bottom: 8px; }
+    .current-left .weather-desc { font-size: 1rem; opacity: 0.85; }
+    .current-right { text-align: right; }
+    .current-temp { font-size: 5rem; font-weight: 700; line-height: 1; }
+    .current-icon { font-size: 3rem; margin-top: 6px; }
+
+    /* Stats row */
+    .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-card {
+      flex: 1; min-width: 130px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 18px 16px;
+      text-align: center;
+    }
+    .stat-label { font-size: 0.78rem; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; }
+
+    /* Section titles */
+    .section-title {
+      font-size: 1rem; font-weight: 600; opacity: 0.75;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 12px; padding-left: 4px;
+    }
+
+    /* 7-day forecast */
+    .forecast-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px; margin-bottom: 24px;
+    }
+    .day-card {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px; padding: 16px 10px; text-align: center;
+    }
+    .day-name { font-size: 0.8rem; font-weight: 600; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+    .day-icon { font-size: 2rem; margin-bottom: 8px; }
+    .day-hi { font-size: 1.1rem; font-weight: 700; }
+    .day-lo { font-size: 0.85rem; opacity: 0.6; margin-top: 2px; }
+    .day-precip { font-size: 0.75rem; margin-top: 6px; opacity: 0.65; }
+
+    /* Hourly scroll */
+    .hourly-scroll {
+      display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px;
+      scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.3) transparent;
+      margin-bottom: 24px;
+    }
+    .hour-card {
+      flex-shrink: 0;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 12px; padding: 14px 12px; text-align: center; min-width: 72px;
+    }
+    .hour-time { font-size: 0.75rem; opacity: 0.65; margin-bottom: 6px; }
+    .hour-icon { font-size: 1.4rem; margin-bottom: 6px; }
+    .hour-temp { font-size: 1rem; font-weight: 700; }
+
+    /* ════════════════════════════════
+       HEALTH PLANNER SECTION
+    ════════════════════════════════ */
+    .planner-card {
+      padding: 30px 32px;
+      margin-bottom: 24px;
+      border-top: 1px solid rgba(255,255,255,0.25);
+    }
+    .planner-card h2 {
+      font-size: 1.4rem; font-weight: 700; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .planner-card .planner-sub {
+      font-size: 0.9rem; opacity: 0.65; margin-bottom: 24px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px; margin-bottom: 22px;
+    }
+
+    .metric-group label {
+      display: block; font-size: 0.8rem; opacity: 0.7;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 7px;
+    }
+
+    .metric-group input,
+    .metric-group select {
+      width: 100%; padding: 12px 14px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.25);
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+      appearance: none;
+    }
+    .metric-group input::placeholder { color: rgba(255,255,255,0.45); }
+    .metric-group input:focus,
+    .metric-group select:focus { border-color: rgba(255,255,255,0.65); }
+
+    /* Style select options for dark bg */
+    .metric-group select option { background: #1a3060; color: #fff; }
+
+    .plan-btn-row { display: flex; justify-content: flex-start; }
+
+    /* Plan output */
+    #planOutput { display: none; margin-top: 28px; }
+
+    .plan-banner {
+      padding: 18px 22px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 14px;
+      font-size: 1rem; font-weight: 600;
+    }
+    .plan-banner.hot    { background: rgba(240,100,50,0.25); border: 1px solid rgba(240,130,80,0.5); }
+    .plan-banner.warm   { background: rgba(240,180,50,0.2);  border: 1px solid rgba(240,200,80,0.45); }
+    .plan-banner.mild   { background: rgba(80,200,140,0.2);  border: 1px solid rgba(100,220,160,0.4); }
+    .plan-banner.cool   { background: rgba(80,160,240,0.2);  border: 1px solid rgba(100,180,250,0.4); }
+    .plan-banner.cold   { background: rgba(160,190,240,0.2); border: 1px solid rgba(180,210,255,0.4); }
+
+    .plan-banner .banner-icon { font-size: 2.2rem; flex-shrink: 0; }
+    .plan-banner .banner-text {}
+    .plan-banner .banner-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
+    .plan-banner .banner-sub { font-size: 0.85rem; opacity: 0.8; font-weight: 400; }
+
+    /* Two-column plan layout */
+    .plan-cols {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 620px) { .plan-cols { grid-template-columns: 1fr; } }
+
+    .plan-block {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px;
+      padding: 22px 20px;
+    }
+
+    .plan-block-title {
+      font-size: 0.82rem; font-weight: 700; opacity: 0.6;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 7px;
+    }
+
+    /* Hydration gauge */
+    .hydro-big {
+      font-size: 3rem; font-weight: 800;
+      color: #7dd3fc; line-height: 1; margin-bottom: 4px;
+    }
+    .hydro-unit { font-size: 1rem; opacity: 0.65; margin-bottom: 14px; }
+
+    .hydro-bar-wrap {
+      background: rgba(255,255,255,0.12);
+      border-radius: 999px; height: 10px; margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .hydro-bar {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+      transition: width 0.6s ease;
+    }
+
+    .hydro-breakdown {
+      font-size: 0.82rem; opacity: 0.65;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+
+    /* Calorie block */
+    .cal-big {
+      font-size: 3rem; font-weight: 800;
+      color: #fbbf24; line-height: 1; margin-bottom: 4px;
+    }
+    .cal-unit { font-size: 1rem; opacity: 0.65; margin-bottom: 14px; }
+    .cal-detail { font-size: 0.82rem; opacity: 0.65; line-height: 1.6; }
+
+    /* Diet recs */
+    .plan-block.full { grid-column: 1 / -1; }
+
+    .recs-list {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    .rec-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 12px 14px;
+    }
+    .rec-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 1px; }
+    .rec-text {}
+    .rec-label { font-size: 0.82rem; font-weight: 700; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; }
+    .rec-desc { font-size: 0.9rem; line-height: 1.5; }
+
+    /* Foods grid */
+    .foods-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px;
+    }
+    .food-chip {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 5px 13px;
+      font-size: 0.82rem;
+    }
+
+    /* Warning notes */
+    .plan-note {
+      background: rgba(255,220,80,0.15);
+      border: 1px solid rgba(255,230,100,0.35);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      margin-top: 14px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .plan-note .note-icon { font-size: 1.2rem; flex-shrink: 0; }
+
+    /* Disclaimer */
+    .disclaimer {
+      font-size: 0.72rem; opacity: 0.35; text-align: center; margin-top: 10px; line-height: 1.5;
+    }
+
+    /* Attribution */
+    .attribution {
+      font-size: 0.72rem; opacity: 0.4; text-align: center; margin-top: 8px;
+    }
+
+    /* Loader */
+    .loader {
+      display: none; text-align: center; padding: 40px; font-size: 1rem; opacity: 0.7;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto 14px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 480px) {
+      h1 { font-size: 1.8rem; }
+      .current-temp { font-size: 3.5rem; }
+      .search-card, .planner-card { padding: 20px 16px; }
+    }
+
+    /* ── Collapsible sections ── */
+    .collapse-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      padding: 14px 22px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      margin-bottom: 14px;
+      transition: background 0.2s, border-radius 0.3s;
+      width: 100%;
+    }
+    .collapse-header:hover { background: rgba(255,255,255,0.16); }
+    .collapse-header.is-open {
+      border-radius: 16px 16px 0 0;
+      margin-bottom: 0;
+      border-bottom-color: transparent;
+    }
+
+    .collapse-header-left {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .collapse-header-title { font-size: 1.05rem; font-weight: 700; }
+    .collapse-header-badge {
+      font-size: 0.78rem; opacity: 0.7;
+      background: rgba(255,255,255,0.12);
+      padding: 3px 11px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .chevron {
+      font-size: 0.9rem;
+      transition: transform 0.32s ease;
+      display: inline-block;
+      opacity: 0.75;
+    }
+    .chevron.is-open { transform: rotate(180deg); }
+
+    .collapsible-body {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height 0.4s ease, opacity 0.3s ease, padding 0.3s ease;
+      opacity: 0;
+    }
+    .collapsible-body.is-open {
+      max-height: 9999px;
+      opacity: 1;
+    }
+
+    /* Body connected to header gets top-joined border */
+    .collapsible-body.bordered {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-top: none;
+      border-radius: 0 0 16px 16px;
+      padding: 0 22px;
+    }
+    .collapsible-body.bordered.is-open { padding: 22px; }
+  </style>
+</head>
+<body>
+
+<h1>🌤 Weather + Health Planner</h1>
+<p class="subtitle">Live weather forecast &amp; a personalized diet &amp; hydration plan — by zipcode</p>
+
+<!-- Search -->
+<div class="glass search-card">
+  <div class="search-row">
+    <input id="zipInput" type="text" placeholder="Enter US zipcode (e.g. 10001)" maxlength="5" inputmode="numeric" />
+    <button class="btn-primary" id="searchBtn" onclick="fetchWeather()">Get Forecast</button>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+</div>
+
+<div class="loader" id="loader">
+  <div class="spinner"></div>
+  <div>Fetching weather data…</div>
+</div>
+
+<!-- Main results -->
+<div id="results">
+
+  <!-- ── Weather Section (collapsible) ── -->
+  <button class="collapse-header is-open" id="wxHeader" onclick="toggleSection('wx')" aria-expanded="true">
+    <div class="collapse-header-left">
+      <span id="wxHeaderIcon">🌤</span>
+      <span class="collapse-header-title">Weather Forecast</span>
+      <span class="collapse-header-badge" id="wxBadge">—</span>
+    </div>
+    <span class="chevron is-open" id="wxChevron">▼</span>
+  </button>
+
+  <div class="collapsible-body bordered is-open" id="wxBody">
+
+    <!-- Current weather -->
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:20px;">
+      <div>
+        <div style="font-size:1.1rem;font-weight:500;opacity:0.75;margin-bottom:4px;">Current Weather</div>
+        <div class="city-name" id="cityName" style="font-size:1.7rem;font-weight:700;margin-bottom:8px;">—</div>
+        <div class="weather-desc" id="weatherDesc" style="font-size:1rem;opacity:0.85;">—</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="current-temp"><span id="currentTemp">—</span>°F</div>
+        <div class="current-icon" id="currentIcon">🌡</div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" style="margin-bottom:20px;">
+      <div class="stat-card"><div class="stat-label">Feels Like</div><div class="stat-value" id="feelsLike">—</div></div>
+      <div class="stat-card"><div class="stat-label">Humidity</div><div class="stat-value" id="humidity">—</div></div>
+      <div class="stat-card"><div class="stat-label">Wind</div><div class="stat-value" id="wind">—</div></div>
+      <div class="stat-card"><div class="stat-label">UV Index</div><div class="stat-value" id="uvIndex">—</div></div>
+      <div class="stat-card"><div class="stat-label">Visibility</div><div class="stat-value" id="visibility">—</div></div>
+    </div>
+
+    <!-- Hourly -->
+    <div class="section-title">Hourly Forecast (next 24h)</div>
+    <div class="hourly-scroll" id="hourlyRow"></div>
+
+    <!-- 7-day -->
+    <div class="section-title">7-Day Forecast</div>
+    <div class="forecast-grid" id="dailyGrid"></div>
+
+  </div><!-- /wxBody -->
+
+  <div style="margin-bottom:20px;"></div>
+
+  <!-- ════════════════════════════════════════
+       HEALTH PLANNER
+  ════════════════════════════════════════ -->
+  <button class="collapse-header is-open" id="planHeader" onclick="toggleSection('plan')" aria-expanded="true">
+    <div class="collapse-header-left">
+      <span>🥗</span>
+      <span class="collapse-header-title">Personalized Health Plan</span>
+    </div>
+    <span class="chevron is-open" id="planChevron">▼</span>
+  </button>
+
+  <div class="collapsible-body bordered is-open" id="planBody">
+    <p class="planner-sub" style="margin-bottom:22px;">Enter your details and we'll generate a diet &amp; hydration plan tailored to today's weather.</p>
+
+    <div class="metrics-grid">
+      <div class="metric-group">
+        <label>Age (years)</label>
+        <input id="metAge" type="number" min="1" max="120" placeholder="e.g. 35" />
+      </div>
+      <div class="metric-group">
+        <label>Weight (lbs)</label>
+        <input id="metWeight" type="number" min="20" max="600" placeholder="e.g. 160" />
+      </div>
+      <div class="metric-group">
+        <label>Gender</label>
+        <select id="metGender">
+          <option value="">Select…</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other / Prefer not to say</option>
+        </select>
+      </div>
+      <div class="metric-group">
+        <label>Activity Level</label>
+        <select id="metActivity">
+          <option value="">Select…</option>
+          <option value="sedentary">Sedentary (desk job, little exercise)</option>
+          <option value="moderate">Moderate (light exercise 3–4×/week)</option>
+          <option value="active">Active (intense exercise 5+×/week)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="plan-btn-row">
+      <button class="btn-accent" onclick="generatePlan()">✨ Generate My Plan</button>
+    </div>
+    <div class="error-msg" id="planError"></div>
+
+    <!-- Plan output -->
+    <div id="planOutput">
+
+      <!-- Banner -->
+      <div class="plan-banner" id="planBanner">
+        <div class="banner-icon" id="bannerIcon"></div>
+        <div class="banner-text">
+          <div class="banner-title" id="bannerTitle"></div>
+          <div class="banner-sub" id="bannerSub"></div>
+        </div>
+      </div>
+
+      <!-- Two columns: Hydration + Calories -->
+      <div class="plan-cols">
+
+        <!-- Hydration -->
+        <div class="plan-block">
+          <div class="plan-block-title">💧 Daily Hydration Goal</div>
+          <div class="hydro-big" id="hydroOz">—</div>
+          <div class="hydro-unit">oz of water per day</div>
+          <div class="hydro-bar-wrap"><div class="hydro-bar" id="hydroBar" style="width:0%"></div></div>
+          <div class="hydro-breakdown" id="hydroBreakdown"></div>
+        </div>
+
+        <!-- Calories -->
+        <div class="plan-block">
+          <div class="plan-block-title">🔥 Estimated Daily Calories</div>
+          <div class="cal-big" id="calTotal">—</div>
+          <div class="cal-unit">kcal per day</div>
+          <div class="cal-detail" id="calDetail"></div>
+        </div>
+
+      </div>
+
+      <!-- Diet recommendations (full width) -->
+      <div class="plan-block full">
+        <div class="plan-block-title">🍽 Weather-Adaptive Diet Recommendations</div>
+        <div class="recs-list" id="recsList"></div>
+      </div>
+
+      <!-- Foods to eat -->
+      <div class="plan-block full" style="margin-top:16px;">
+        <div class="plan-block-title">✅ Best Foods for Today's Weather</div>
+        <div class="foods-grid" id="goodFoods"></div>
+      </div>
+
+      <!-- Foods to avoid -->
+      <div class="plan-block full" style="margin-top:16px;">
+        <div class="plan-block-title">🚫 Foods to Limit Today</div>
+        <div class="foods-grid" id="avoidFoods"></div>
+      </div>
+
+      <!-- Special age/gender notes -->
+      <div id="specialNotes"></div>
+
+      <p class="disclaimer">⚕️ This plan is for general wellness guidance only and does not constitute medical advice. Consult a healthcare provider before making significant dietary changes.</p>
+    </div><!-- /planOutput -->
+
+  </div><!-- /planBody -->
+
+  <div class="attribution" style="margin-top:20px;">Weather: Open-Meteo &amp; Zippopotam.us &nbsp;•&nbsp; Plan based on established nutritional guidelines</div>
+</div><!-- /results -->
+
+<script>
+/* ════════════════════════════════
+   COLLAPSIBLE TOGGLE
+════════════════════════════════ */
+function toggleSection(id) {
+  const body    = document.getElementById(id + 'Body');
+  const chevron = document.getElementById(id + 'Chevron');
+  const header  = document.getElementById(id + 'Header');
+  const opening = !body.classList.contains('is-open');
+
+  body.classList.toggle('is-open', opening);
+  chevron.classList.toggle('is-open', opening);
+  header.classList.toggle('is-open', opening);
+  header.setAttribute('aria-expanded', opening);
+}
+
+/* ════════════════════════════════
+   WEATHER SECTION
+════════════════════════════════ */
+const WMO = {
+  0:  { desc:'Clear Sky',            icon:'☀️' },
+  1:  { desc:'Mostly Clear',         icon:'🌤' },
+  2:  { desc:'Partly Cloudy',        icon:'⛅' },
+  3:  { desc:'Overcast',             icon:'☁️' },
+  45: { desc:'Foggy',                icon:'🌫' },
+  48: { desc:'Icy Fog',              icon:'🌫' },
+  51: { desc:'Light Drizzle',        icon:'🌦' },
+  53: { desc:'Drizzle',              icon:'🌦' },
+  55: { desc:'Heavy Drizzle',        icon:'🌧' },
+  61: { desc:'Light Rain',           icon:'🌧' },
+  63: { desc:'Moderate Rain',        icon:'🌧' },
+  65: { desc:'Heavy Rain',           icon:'🌧' },
+  71: { desc:'Light Snow',           icon:'🌨' },
+  73: { desc:'Moderate Snow',        icon:'❄️' },
+  75: { desc:'Heavy Snow',           icon:'❄️' },
+  77: { desc:'Snow Grains',          icon:'🌨' },
+  80: { desc:'Light Showers',        icon:'🌦' },
+  81: { desc:'Showers',              icon:'🌧' },
+  82: { desc:'Heavy Showers',        icon:'⛈' },
+  85: { desc:'Snow Showers',         icon:'🌨' },
+  86: { desc:'Heavy Snow Showers',   icon:'❄️' },
+  95: { desc:'Thunderstorm',         icon:'⛈' },
+  96: { desc:'Thunderstorm w/ Hail', icon:'⛈' },
+  99: { desc:'Severe Thunderstorm',  icon:'🌩' },
+};
+function wmo(code){ return WMO[code]||{desc:'Unknown',icon:'🌡'}; }
+function cToF(c){ return Math.round(c*9/5+32); }
+function mpsToMph(mps){ return Math.round(mps*2.237); }
+
+// Global state for plan generator
+let currentTempF = null;
+let currentHumidity = null;
+
+function showError(id, msg){
+  const el=document.getElementById(id);
+  el.textContent=msg; el.style.display='block';
+}
+function clearError(id){
+  const el=document.getElementById(id);
+  el.style.display='none'; el.textContent='';
+}
+
+async function fetchWeather(){
+  const zip=document.getElementById('zipInput').value.trim();
+  if(!/^\d{5}$/.test(zip)){ showError('errorMsg','Please enter a valid 5-digit US zipcode.'); return; }
+  clearError('errorMsg');
+  document.getElementById('results').style.display='none';
+  document.getElementById('loader').style.display='block';
+  document.getElementById('searchBtn').disabled=true;
+
+  try{
+    const geoRes=await fetch(`https://api.zippopotam.us/us/${zip}`);
+    if(!geoRes.ok) throw new Error('Zipcode not found. Please check and try again.');
+    const geo=await geoRes.json();
+    const place=geo.places[0];
+    const lat=parseFloat(place.latitude);
+    const lon=parseFloat(place.longitude);
+    const city=`${place['place name']}, ${place['state abbreviation']}`;
+
+    const wxUrl=`https://api.open-meteo.com/v1/forecast?`
+      +`latitude=${lat}&longitude=${lon}`
+      +`&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,uv_index,visibility`
+      +`&hourly=temperature_2m,weather_code,precipitation_probability`
+      +`&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max`
+      +`&temperature_unit=celsius&wind_speed_unit=ms&timezone=auto&forecast_days=7`;
+
+    const wxRes=await fetch(wxUrl);
+    if(!wxRes.ok) throw new Error('Could not fetch weather data. Please try again.');
+    const wx=await wxRes.json();
+
+    renderWeather(city,wx);
+  } catch(err){
+    document.getElementById('loader').style.display='none';
+    document.getElementById('searchBtn').disabled=false;
+    showError('errorMsg', err.message||'Something went wrong. Please try again.');
+  }
+}
+
+function renderWeather(city, wx){
+  const cur=wx.current;
+  const w=wmo(cur.weather_code);
+  const tempF=cToF(cur.temperature_2m);
+
+  // Store globally for plan
+  currentTempF=tempF;
+  currentHumidity=cur.relative_humidity_2m;
+
+  // Update collapsible header badge with a quick summary
+  document.getElementById('wxBadge').textContent=`${city} · ${tempF}°F · ${w.desc}`;
+  document.getElementById('wxHeaderIcon').textContent=w.icon;
+
+  document.getElementById('cityName').textContent=city;
+  document.getElementById('weatherDesc').textContent=w.desc;
+  document.getElementById('currentTemp').textContent=tempF;
+  document.getElementById('currentIcon').textContent=w.icon;
+  document.getElementById('feelsLike').textContent=cToF(cur.apparent_temperature)+'°F';
+  document.getElementById('humidity').textContent=cur.relative_humidity_2m+'%';
+  document.getElementById('wind').textContent=mpsToMph(cur.wind_speed_10m)+' mph';
+  document.getElementById('uvIndex').textContent=cur.uv_index??'—';
+  document.getElementById('visibility').textContent=
+    cur.visibility!=null?(cur.visibility/1000).toFixed(1)+' km':'—';
+
+  // Hourly
+  const hourlyRow=document.getElementById('hourlyRow');
+  hourlyRow.innerHTML='';
+  const now=new Date();
+  const times=wx.hourly.time;
+  let shown=0;
+  for(let i=0;i<times.length&&shown<24;i++){
+    const t=new Date(times[i]);
+    if(t<now) continue;
+    const hw=wmo(wx.hourly.weather_code[i]);
+    const h=t.getHours();
+    const label=h===0?'12 AM':h<12?`${h} AM`:h===12?'12 PM':`${h-12} PM`;
+    const card=document.createElement('div');
+    card.className='hour-card';
+    card.innerHTML=`<div class="hour-time">${label}</div><div class="hour-icon">${hw.icon}</div><div class="hour-temp">${cToF(wx.hourly.temperature_2m[i])}°</div>`;
+    hourlyRow.appendChild(card);
+    shown++;
+  }
+
+  // Daily
+  const dailyGrid=document.getElementById('dailyGrid');
+  dailyGrid.innerHTML='';
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  wx.daily.time.forEach((dateStr,i)=>{
+    const d=new Date(dateStr+'T12:00:00');
+    const dw=wmo(wx.daily.weather_code[i]);
+    const dayName=i===0?'Today':days[d.getDay()];
+    const card=document.createElement('div');
+    card.className='day-card';
+    card.innerHTML=`<div class="day-name">${dayName}</div><div class="day-icon">${dw.icon}</div><div class="day-hi">${cToF(wx.daily.temperature_2m_max[i])}°</div><div class="day-lo">${cToF(wx.daily.temperature_2m_min[i])}°</div><div class="day-precip">💧 ${wx.daily.precipitation_probability_max[i]??0}%</div>`;
+    dailyGrid.appendChild(card);
+  });
+
+  document.getElementById('loader').style.display='none';
+  document.getElementById('results').style.display='block';
+  document.getElementById('searchBtn').disabled=false;
+
+  // Reset plan output
+  document.getElementById('planOutput').style.display='none';
+}
+
+document.getElementById('zipInput').addEventListener('keydown',(e)=>{ if(e.key==='Enter') fetchWeather(); });
+
+
+/* ════════════════════════════════
+   HEALTH PLANNER ENGINE
+════════════════════════════════ */
+
+function generatePlan(){
+  clearError('planError');
+
+  const age    = parseInt(document.getElementById('metAge').value);
+  const weight = parseFloat(document.getElementById('metWeight').value);
+  const gender = document.getElementById('metGender').value;
+  const act    = document.getElementById('metActivity').value;
+
+  if(!age||age<1||age>120)   { showError('planError','Please enter a valid age (1–120).'); return; }
+  if(!weight||weight<20)      { showError('planError','Please enter a valid weight (lbs).'); return; }
+  if(!gender)                 { showError('planError','Please select a gender.'); return; }
+  if(!act)                    { showError('planError','Please select an activity level.'); return; }
+  if(currentTempF===null)     { showError('planError','Fetch a weather forecast first.'); return; }
+
+  const tempF    = currentTempF;
+  const humidity = currentHumidity ?? 50;
+
+  /* ── Weather tier ── */
+  let tier, tierLabel, tierClass, tierIcon, tierSub;
+  if(tempF >= 95){
+    tier='very_hot'; tierLabel='Extreme Heat Day'; tierClass='hot';
+    tierIcon='🔥'; tierSub=`${tempF}°F — High risk of heat exhaustion. Prioritize hydration & cooling foods.`;
+  } else if(tempF >= 85){
+    tier='hot'; tierLabel='Hot Day'; tierClass='hot';
+    tierIcon='☀️'; tierSub=`${tempF}°F — Warm conditions. Increase fluids and eat light.`;
+  } else if(tempF >= 75){
+    tier='warm'; tierLabel='Warm Day'; tierClass='warm';
+    tierIcon='🌤'; tierSub=`${tempF}°F — Comfortable but stay proactively hydrated.`;
+  } else if(tempF >= 60){
+    tier='mild'; tierLabel='Mild Day'; tierClass='mild';
+    tierIcon='🌿'; tierSub=`${tempF}°F — Great conditions. A balanced plan works well today.`;
+  } else if(tempF >= 45){
+    tier='cool'; tierLabel='Cool Day'; tierClass='cool';
+    tierIcon='🍂'; tierSub=`${tempF}°F — Cooler air. Warm meals and hot drinks help maintain energy.`;
+  } else {
+    tier='cold'; tierLabel='Cold Day'; tierClass='cold';
+    tierIcon='❄️'; tierSub=`${tempF}°F — Cold conditions. Your body needs more energy to stay warm.`;
+  }
+
+  /* ── Hydration calculation ── */
+  // Base: 0.5 oz per lb of body weight (standard formula)
+  let baseOz = Math.round(weight * 0.5);
+
+  // Temperature bonus
+  let tempBonus=0;
+  if(tier==='very_hot') tempBonus=32;
+  else if(tier==='hot') tempBonus=24;
+  else if(tier==='warm') tempBonus=16;
+  else if(tier==='mild') tempBonus=8;
+  else if(tier==='cool') tempBonus=0;
+  else tempBonus=-4; // cold, but never below base
+
+  // Humidity bonus (high humidity reduces sweat cooling → need more water)
+  let humBonus=0;
+  if(humidity>70 && (tier==='hot'||tier==='very_hot')) humBonus=8;
+  else if(humidity>80) humBonus=4;
+
+  // Activity bonus
+  let actBonus=0;
+  if(act==='active') actBonus=24;       // ~12 oz per 30min exercise × 2 sessions
+  else if(act==='moderate') actBonus=12;
+
+  // Age adjustment
+  let ageHydroNote='';
+  if(age>=65){ baseOz=Math.max(baseOz,64); ageHydroNote='Seniors often have a reduced sense of thirst — set hourly reminders to drink.'; }
+  if(age<12){ baseOz=Math.round(weight*0.5); ageHydroNote='Children need consistent hydration; serve water with every meal and snack.'; }
+
+  const totalOz = Math.max(baseOz, baseOz + tempBonus + humBonus + actBonus);
+  const totalCups = (totalOz/8).toFixed(1);
+
+  // Gauge: typical range 40–128 oz
+  const gaugeW = Math.min(100, Math.round((totalOz-40)/(128-40)*100));
+
+  // Build breakdown lines
+  const breakLines=[
+    `Base (${weight} lbs × 0.5): ${Math.round(weight*0.5)} oz`,
+    tempBonus>0 ? `+ ${tempBonus} oz for ${tierLabel}` : (tempBonus<0 ? `${tempBonus} oz (cold weather)` : null),
+    humBonus>0  ? `+ ${humBonus} oz for high humidity (${humidity}%)` : null,
+    actBonus>0  ? `+ ${actBonus} oz for ${act} activity` : null,
+  ].filter(Boolean);
+
+  /* ── Calorie calculation ── */
+  // Weight-based multiplier (no height required)
+  // Mifflin-St Jeor simplified without height → using average height proxy
+  // Average male height ~5'9" (175cm), female ~5'4" (163cm)
+  const wKg = weight * 0.453592;
+  const avgHeightCm = gender==='male' ? 175 : 163;
+
+  let bmr;
+  if(gender==='male'){
+    bmr = 10*wKg + 6.25*avgHeightCm - 5*age + 5;
+  } else {
+    // female or other
+    bmr = 10*wKg + 6.25*(gender==='other'?169:avgHeightCm) - 5*age - 161;
+  }
+
+  // Activity multiplier (Harris-Benedict)
+  const actMult = act==='active' ? 1.725 : act==='moderate' ? 1.55 : 1.2;
+  let tdee = Math.round(bmr * actMult);
+
+  // Cold weather: +5-10% for thermoregulation
+  let caloricNote='';
+  if(tier==='cold')      { tdee=Math.round(tdee*1.08); caloricNote='+8% for thermoregulation in cold weather.'; }
+  else if(tier==='very_hot'){ tdee=Math.round(tdee*0.97); caloricNote='Slightly reduced appetite is normal in extreme heat; focus on nutrient density.'; }
+
+  // Age range note
+  let calAgeNote='';
+  if(age<13) calAgeNote='Growing children have higher per-kg calorie needs — consult a pediatrician for precise targets.';
+  else if(age>=65) calAgeNote='After 65, metabolism slows; prioritize protein (to preserve muscle) and calcium.';
+
+  const calMin=Math.round(tdee*0.95);
+  const calMax=Math.round(tdee*1.05);
+
+  /* ── Diet recommendations by tier ── */
+  const tierRecs = {
+    very_hot: [
+      { icon:'🥗', label:'Eat Light & Frequent', desc:'Divide meals into 5–6 smaller portions. Large meals generate body heat during digestion — keep it light.' },
+      { icon:'🍉', label:'Cooling Foods', desc:'Prioritize high-water-content produce: watermelon, cucumber, celery, strawberries, lettuce, and peaches.' },
+      { icon:'⚡', label:'Replenish Electrolytes', desc:'Sweat depletes sodium, potassium, and magnesium. Add a banana, coconut water, or a pinch of salt to meals.' },
+      { icon:'🍦', label:'Chilled Proteins', desc:'Cold chicken salad, Greek yogurt, cottage cheese, or chilled tofu keep protein intake up without adding heat.' },
+    ],
+    hot: [
+      { icon:'🥙', label:'Fresh & Uncooked When Possible', desc:'Salads, wraps, smoothie bowls, and sushi-style meals reduce kitchen heat and are easier to digest.' },
+      { icon:'🍌', label:'Electrolyte Balance', desc:'Include potassium-rich foods (banana, avocado, sweet potato) and magnesium-rich foods (spinach, nuts, seeds).' },
+      { icon:'🫐', label:'Antioxidant-Rich Foods', desc:'Heat increases oxidative stress. Blueberries, tomatoes, bell peppers, and dark leafy greens are great choices.' },
+      { icon:'🧃', label:'Natural Hydrating Drinks', desc:'Coconut water, diluted 100% fruit juice, or herbal iced teas are hydrating alternatives to plain water.' },
+    ],
+    warm: [
+      { icon:'🥦', label:'Balanced Plate Rule', desc:'Aim for ½ vegetables, ¼ lean protein, ¼ whole grains at each meal. Plenty of fiber keeps energy stable.' },
+      { icon:'🫐', label:'Fresh Fruits & Snacks', desc:'Great weather for outdoor eating. Pack fresh fruit, trail mix, or veggie sticks for on-the-go energy.' },
+      { icon:'💧', label:'Pre-Hydrate', desc:'Drink a glass of water 30 minutes before heading outside to get ahead of any fluid loss.' },
+      { icon:'🐟', label:'Lean Proteins', desc:'Grilled fish, chicken, legumes, or tofu provide sustained energy for active warm days.' },
+    ],
+    mild: [
+      { icon:'🥗', label:'Standard Balanced Diet', desc:'Ideal weather for a classic balanced diet. Whole grains, colorful vegetables, lean protein, and healthy fats.' },
+      { icon:'🍲', label:'Warm Comfort Meals OK', desc:'Light soups, stews, or baked dishes are perfectly appropriate today. Focus on whole ingredients.' },
+      { icon:'🌰', label:'Healthy Snacking', desc:'Nuts, seeds, fruit, and whole grain crackers help maintain steady blood sugar between meals.' },
+      { icon:'☕', label:'Mindful Caffeine', desc:'Mild temps mean less heat stress. A moderate amount of coffee or tea is fine; stay within 1–2 cups.' },
+    ],
+    cool: [
+      { icon:'🍵', label:'Warming Foods & Drinks', desc:'Oatmeal, soups, stews, herbal teas, and warm whole-grain toast support body temperature regulation.' },
+      { icon:'🥕', label:'Root Vegetables', desc:'Sweet potato, carrots, parsnips, and beets are nutrient-dense, warming, and easy to roast or soup.' },
+      { icon:'🫘', label:'Slow-Burn Carbohydrates', desc:'Lentils, chickpeas, brown rice, and oats provide sustained energy without blood sugar spikes.' },
+      { icon:'🧄', label:'Immune-Boosting Foods', desc:'Garlic, ginger, turmeric, and citrus fruits support immunity as cooler weather arrives.' },
+    ],
+    cold: [
+      { icon:'🍲', label:'Calorie-Dense Warming Meals', desc:'Your body burns extra calories staying warm. Hearty stews, chili, casseroles, and whole-grain breads provide lasting fuel.' },
+      { icon:'🐟', label:'Omega-3 Rich Foods', desc:'Cold weather can stiffen joints. Salmon, sardines, walnuts, and flaxseeds provide anti-inflammatory omega-3s.' },
+      { icon:'🥣', label:'High-Protein Breakfast', desc:'Eggs, Greek yogurt, or oatmeal with nuts and seeds stabilize blood sugar and keep you warm through the morning.' },
+      { icon:'🧅', label:'Vitamin C & D Focus', desc:'Limited sunlight reduces Vitamin D. Add fortified foods, fatty fish, and citrus to support immunity.' },
+    ],
+  };
+
+  const goodFoodMap = {
+    very_hot: ['Watermelon','Cucumber','Coconut Water','Greek Yogurt','Cold Smoothies','Celery','Strawberries','Iced Green Tea','Gazpacho','Chilled Tofu'],
+    hot:      ['Berries','Avocado','Tomatoes','Spinach Salad','Banana','Bell Peppers','Cold Brew','Mango','Lemon Water','Cottage Cheese'],
+    warm:     ['Grilled Chicken','Brown Rice','Mixed Greens','Almonds','Fresh Fruit','Quinoa','Legumes','Iced Herbal Tea','Whole Grain Wrap','Carrots'],
+    mild:     ['Salmon','Broccoli','Oatmeal','Eggs','Apples','Whole Wheat Bread','Lentils','Olive Oil','Walnuts','Sweet Potato'],
+    cool:     ['Lentil Soup','Roasted Root Veg','Oatmeal','Ginger Tea','Chickpeas','Pumpkin','Cinnamon Oats','Herbal Tea','Brown Rice','Beets'],
+    cold:     ['Beef Stew','Salmon','Dark Leafy Greens','Eggs','Bone Broth','Sweet Potato','Walnuts','Black Beans','Hot Cocoa','Turmeric Milk'],
+  };
+
+  const avoidFoodMap = {
+    very_hot: ['Alcohol','Salty Chips','Heavy Red Meat','Deep-Fried Foods','Energy Drinks','Spicy Food (excess)','Large Portions'],
+    hot:      ['Heavy Pasta','Greasy Food','Alcohol','Too Much Caffeine','Processed Meats','White Bread'],
+    warm:     ['Sugary Sodas','Excessive Alcohol','Fried Snacks','Ultra-Processed Foods'],
+    mild:     ['Excess Sugar','Fast Food','Soda','Heavily Salted Snacks'],
+    cool:     ['Iced Cold Drinks (excess)','Skipping Meals','Refined Sugar (energy crashes)','Excessive Caffeine'],
+    cold:     ['Alcohol (lowers core temp)','Lots of Caffeine','Ice Cream / Cold Desserts','Skipping Breakfast','Sugary Cereals'],
+  };
+
+  /* ── Special notes by age/gender ── */
+  const notes=[];
+  if(age<13) notes.push({icon:'👶',text:'Children: Offer water frequently — they often don\'t self-regulate well. Avoid juice and soda. Prioritize calcium (dairy, fortified plant milk) and iron-rich foods (lean meat, beans, leafy greens).'});
+  else if(age<18) notes.push({icon:'🧑',text:'Teens: Growing bodies need extra calcium, iron, and protein. Teenage athletes especially need to pre-hydrate before and replenish after physical activity.'});
+  else if(age>=65) notes.push({icon:'🧓',text:'Seniors (65+): Thirst response weakens with age — drink water on a schedule even if not thirsty. Boost Vitamin D, Calcium, B12, and Fiber intake. Limit sodium to support heart health.'});
+  if(gender==='female' && age>=13 && age<50) notes.push({icon:'👩',text:'Iron needs are higher for women of reproductive age. Include iron-rich foods (spinach, lentils, lean beef) and pair with Vitamin C to boost absorption.'});
+  if(act==='active') notes.push({icon:'🏋️',text:'Active individuals: Consume 20–30 g protein within 30–60 minutes post-workout to support muscle recovery. Consider pre-workout carbohydrates for energy (banana, oatmeal).'});
+
+  /* ── Render ── */
+  // Banner
+  const banner=document.getElementById('planBanner');
+  banner.className=`plan-banner ${tierClass}`;
+  document.getElementById('bannerIcon').textContent=tierIcon;
+  document.getElementById('bannerTitle').textContent=tierLabel;
+  document.getElementById('bannerSub').textContent=tierSub;
+
+  // Hydration
+  document.getElementById('hydroOz').textContent=totalOz;
+  document.getElementById('hydroBar').style.width=gaugeW+'%';
+  document.getElementById('hydroBreakdown').innerHTML=
+    breakLines.map(l=>`<span>${l}</span>`).join('')
+    +(ageHydroNote?`<span style="color:#7dd3fc;margin-top:4px;">ℹ️ ${ageHydroNote}</span>`:'')
+    +`<span style="margin-top:6px;opacity:0.9;">≈ ${totalCups} cups of water per day</span>`;
+
+  // Calories
+  document.getElementById('calTotal').textContent=tdee.toLocaleString();
+  document.getElementById('calDetail').innerHTML=
+    `Range: <strong>${calMin.toLocaleString()} – ${calMax.toLocaleString()} kcal</strong><br>`
+    +`BMR: ~${Math.round(bmr).toLocaleString()} kcal<br>`
+    +`Activity multiplier: ×${actMult}<br>`
+    +(caloricNote?`<br><em>${caloricNote}</em>`:'')
+    +(calAgeNote?`<br><br><em>${calAgeNote}</em>`:'');
+
+  // Diet recs
+  const recsList=document.getElementById('recsList');
+  recsList.innerHTML='';
+  (tierRecs[tier]||[]).forEach(r=>{
+    const div=document.createElement('div');
+    div.className='rec-item';
+    div.innerHTML=`<div class="rec-icon">${r.icon}</div><div class="rec-text"><div class="rec-label">${r.label}</div><div class="rec-desc">${r.desc}</div></div>`;
+    recsList.appendChild(div);
+  });
+
+  // Good foods
+  const gf=document.getElementById('goodFoods');
+  gf.innerHTML=(goodFoodMap[tier]||[]).map(f=>`<span class="food-chip">✅ ${f}</span>`).join('');
+
+  // Avoid foods
+  const af=document.getElementById('avoidFoods');
+  af.innerHTML=(avoidFoodMap[tier]||[]).map(f=>`<span class="food-chip" style="border-color:rgba(255,120,100,0.4);background:rgba(255,80,60,0.1);">🚫 ${f}</span>`).join('');
+
+  // Special notes
+  const sn=document.getElementById('specialNotes');
+  if(notes.length){
+    sn.innerHTML=notes.map(n=>`<div class="plan-note"><span class="note-icon">${n.icon}</span><span>${n.text}</span></div>`).join('');
+  } else {
+    sn.innerHTML='';
+  }
+
+  document.getElementById('planOutput').style.display='block';
+  document.getElementById('planOutput').scrollIntoView({behavior:'smooth',block:'start'});
+}
+</script>
+</body>
+</html>
